@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const TokenType = enum {
+pub const TokenType = enum {
     Number,
     Keyword,
     Identifier,
@@ -14,9 +14,11 @@ const TokenType = enum {
     String,
 };
 
-const VecToken = std.ArrayList(Token);
+pub const VecToken = std.ArrayList(Token);
 
-const Token = struct {
+pub const Token = struct {
+    const Self = @This();
+
     kind: TokenType,
     lexme: []const u8,
 
@@ -28,7 +30,7 @@ const Token = struct {
     }
 
     pub fn format(
-        self: Token,
+        self: Self,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         out_stream: anytype,
