@@ -59,6 +59,7 @@ const OpCode = struct {
 };
 
 pub const Machine = struct {
+    const Self = @This();
     program: []const u32,
     ip: usize,
     stack: [1024]u32,
@@ -67,8 +68,8 @@ pub const Machine = struct {
     isRunning: bool,
     exitCode: u32,
 
-    pub fn init(program: []const u32) Machine {
-        return Machine{
+    pub fn init(program: []const u32) Self {
+        return Self{
             .program = program,
             .ip = 0,
             .heap = [_]u8{0} ** 1024,
@@ -78,7 +79,7 @@ pub const Machine = struct {
         };
     }
 
-    pub fn runOnce(self: *Machine, opCode: OpCode) void {
+    pub fn runOnce(self: *Self, opCode: OpCode) void {
         switch (opCode.type) {
             OpCodeType.Load => {
                 const reg = opCode.registerFromArg1();
@@ -129,7 +130,7 @@ pub const Machine = struct {
         }
     }
 
-    pub fn run(self: *Machine) void {
+    pub fn run(self: *Self) void {
         while (self.isRunning and self.ip < self.program.len) {
             const opCode = OpCode.decode(self.program[self.ip]);
             // std.debug.print("ip: {d} type: {s} arg1: {d} arg2: {d} arg3: {d}\n",
@@ -141,7 +142,7 @@ pub const Machine = struct {
         // self.print_registers();
     }
 
-    fn print_registers(self: *Machine) void {
+    fn print_registers(self: *Self) void {
         std.debug.print("registers: ", .{});
         for (self.registers) |reg| {
             std.debug.print("{d} ", .{reg});
@@ -149,7 +150,7 @@ pub const Machine = struct {
         std.debug.print("\n", .{});
     }
 
-    fn print_heap(self: *Machine) void {
+    fn print_heap(self: *Self) void {
         std.debug.print("heap: ", .{});
         for (self.heap) |reg| {
             std.debug.print("{d} ", .{reg});
@@ -157,18 +158,18 @@ pub const Machine = struct {
         std.debug.print("\n", .{});
     }
 
-    fn getRegister(self: *Machine, register: usize) u32 {
+    fn getRegister(self: *Self, register: usize) u32 {
         return self.registers[register];
     }
 
-    fn storeu8(self: *Machine, register: usize, source: usize) void {
+    fn storeu8(self: *Self, register: usize, source: usize) void {
         const num = self.registers[source];
         const des = self.registers[register];
         const value = @as(u8, @truncate(num << 0));
         self.heap[des] = value;
     }
 
-    fn storeu16(self: *Machine, register: usize, source: usize) void {
+    fn storeu16(self: *Self, register: usize, source: usize) void {
         const num = self.registers[source];
         const des = self.registers[register];
         const value1 = @as(u8, @truncate(num << 8));
@@ -177,7 +178,7 @@ pub const Machine = struct {
         self.heap[des + 1] = value2;
     }
 
-    fn storeu32(self: *Machine, register: usize, source: usize) void {
+    fn storeu32(self: *Self, register: usize, source: usize) void {
         const num = self.registers[source];
         const des = self.registers[register];
         const value1 = @as(u8, @truncate(num << 24));
@@ -190,15 +191,15 @@ pub const Machine = struct {
         self.heap[des + 3] = value4;
     }
 
-    fn load(self: *Machine, location: usize, destination: usize) void {
+    fn load(self: *Self, location: usize, destination: usize) void {
         self.registers[destination] = self.heap[location];
     }
 
-    fn loadImm(self: *Machine, register: usize, value: u32) void {
+    fn loadImm(self: *Self, register: usize, value: u32) void {
         self.registers[register] = value;
     }
 
-    fn inc(self: *Machine, register: usize) void {
+    fn inc(self: *Self, register: usize) void {
         self.registers[register] += 1;
     }
 
@@ -210,7 +211,7 @@ pub const Machine = struct {
         std.debug.panic("Opcode.Push for VM is not implemented", .{});
     }
 
-    fn syscall(self: *Machine) void {
+    fn syscall(self: *Self) void {
         const syscallType = self.getRegister(0);
         switch (syscallType) {
             0 => self.syscall_exit(),
@@ -220,12 +221,12 @@ pub const Machine = struct {
         }
     }
 
-    fn syscall_exit(self: *Machine) void {
+    fn syscall_exit(self: *Self) void {
         self.isRunning = false;
         self.exitCode = self.getRegister(1);
     }
 
-    fn syscall_print_stdout(self: *Machine) void {
+    fn syscall_print_stdout(self: *Self) void {
         const start = self.getRegister(1);
         const len = self.getRegister(2);
         const bytes = self.heap[start .. start + len];
@@ -233,7 +234,7 @@ pub const Machine = struct {
         stdout.print("{s}", .{bytes}) catch unreachable;
     }
 
-    fn syscall_print_stderr(self: *Machine) void {
+    fn syscall_print_stderr(self: *Self) void {
         _ = self;
         // const start = self.getRegister(reg2);
         // _ = start;
