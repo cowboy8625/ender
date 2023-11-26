@@ -14,6 +14,19 @@ pub const TokenType = enum {
     String,
 };
 
+pub const Keyword = enum {
+    Load,
+    LoadImm,
+    Storeu8,
+    Storeu16,
+    Storeu32,
+    Inc,
+    Push,
+    Pop,
+    Add,
+    SysCall,
+};
+
 pub const VecToken = std.ArrayList(Token);
 
 pub const Token = struct {
@@ -27,6 +40,34 @@ pub const Token = struct {
             .kind = kind,
             .lexme = lexme,
         };
+    }
+
+    pub fn keyword(self: *const Self) ?Keyword {
+        if (self.kind != TokenType.Keyword) {
+            return null;
+        }
+        if (std.mem.eql(u8, self.lexme, "load")) {
+            return Keyword.Load;
+        } else if (std.mem.eql(u8, self.lexme, "loadimm")) {
+            return Keyword.LoadImm;
+        } else if (std.mem.eql(u8, self.lexme, "storeu8")) {
+            return Keyword.Storeu8;
+        } else if (std.mem.eql(u8, self.lexme, "storeu16")) {
+            return Keyword.Storeu16;
+        } else if (std.mem.eql(u8, self.lexme, "storeu32")) {
+            return Keyword.Storeu32;
+        } else if (std.mem.eql(u8, self.lexme, "inc")) {
+            return Keyword.Inc;
+        } else if (std.mem.eql(u8, self.lexme, "push")) {
+            return Keyword.Push;
+        } else if (std.mem.eql(u8, self.lexme, "pop")) {
+            return Keyword.Pop;
+        } else if (std.mem.eql(u8, self.lexme, "add")) {
+            return Keyword.Add;
+        } else if (std.mem.eql(u8, self.lexme, "syscall")) {
+            return Keyword.SysCall;
+        }
+        unreachable;
     }
 
     pub fn format(
