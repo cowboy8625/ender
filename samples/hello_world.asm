@@ -1,4 +1,8 @@
-entry main
+.entry main
+;.data
+;string: .ascii "Hello World!"
+;len: .length string
+.text
 main:
   loadimm  %0  1
   loadimm  %1  1

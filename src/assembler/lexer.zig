@@ -10,8 +10,8 @@ pub const TokenType = enum {
     Star,
     Slash,
     Colon,
-    Semicolon,
     String,
+    Dot,
 };
 
 pub const Keyword = enum {
@@ -119,7 +119,7 @@ fn lineComment(ip: *usize, buf: []const u8) void {
 
 fn isLineComment(ip: usize, buf: []const u8) bool {
     const next = peek(ip, buf) orelse return false;
-    return buf[ip] == '/' and next == '/';
+    return buf[ip] == ';' and next == ';';
 }
 
 fn peek(ip: usize, buf: []const u8) ?u8 {
@@ -145,7 +145,7 @@ pub fn lexer(src: []const u8) !VecToken {
             const token = Token.init(kind, result);
             try tokens.append(token);
             ip += 1;
-        } else if (isLineComment(ip, src)) {
+        } else if (src[ip] == ';') {
             lineComment(&ip, src);
             ip += 1;
         } else if (src[ip] == '"') {
@@ -177,8 +177,8 @@ pub fn lexer(src: []const u8) !VecToken {
             const token = Token.init(.Colon, ":");
             try tokens.append(token);
             ip += 1;
-        } else if (src[ip] == ';') {
-            const token = Token.init(.Semicolon, ";");
+        } else if (src[ip] == '.') {
+            const token = Token.init(.Dot, ".");
             try tokens.append(token);
             ip += 1;
         } else if (std.ascii.isWhitespace(src[ip])) {

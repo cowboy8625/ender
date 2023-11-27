@@ -59,7 +59,6 @@ const OpCode = struct {
 };
 
 pub const Machine = struct {
-    const Self = @This();
     program: []const u32,
     ip: usize,
     stack: [1024]u32,
@@ -68,10 +67,13 @@ pub const Machine = struct {
     isRunning: bool,
     exitCode: u32,
 
+    const Self = @This();
+
     pub fn init(program: []const u32) Self {
-        return Self{
+        return Machine{
             .program = program,
             .ip = 0,
+            .stack = [_]u32{0} ** 1024,
             .heap = [_]u8{0} ** 1024,
             .registers = [_]u32{0} ** 32,
             .isRunning = true,

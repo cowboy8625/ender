@@ -4,99 +4,61 @@ const TT = @import("lexer.zig").TokenType;
 const Keyword = @import("lexer.zig").Keyword;
 const Token = @import("lexer.zig").Token;
 
+const Register = @import("instruction.zig").Register;
+const Label = @import("instruction.zig").Label;
+const Load = @import("instruction.zig").Load;
+const LoadImm = @import("instruction.zig").LoadImm;
+const Storeu8 = @import("instruction.zig").Storeu8;
+const Storeu16 = @import("instruction.zig").Storeu16;
+const Storeu32 = @import("instruction.zig").Storeu32;
+const Increment = @import("instruction.zig").Increment;
+const Push = @import("instruction.zig").Push;
+const Pop = @import("instruction.zig").Pop;
+const Add = @import("instruction.zig").Add;
+const SysCall = @import("instruction.zig").SysCall;
+const Instruction = @import("instruction.zig").Instruction;
+const InstructionType = @import("instruction.zig").InstructionType;
+const InstructionSet = @import("instruction.zig").InstructionSet;
+const Directive = @import("directive.zig").Directive;
+const Text = @import("directive.zig").Text;
+const Data = @import("directive.zig").Data;
+const Entry = @import("directive.zig").Entry;
+
 pub const Error = error{
     ExpectedRegister,
     ExpectedNumber,
     ExpectedPercentSign,
+    ExpectedIdentifier,
+    ExpectedColon,
+    ExpectedDirective,
 };
-
-pub const InstructionSet = std.ArrayList(Instruction);
-
-pub const InstructionType = enum {
-    load,
-    loadimm,
-    storeu8,
-    storeu16,
-    storeu32,
-    inc,
-    push,
-    pop,
-    add,
-    syscall,
-};
-
-pub const Instruction = union(InstructionType) {
-    load: Load,
-    loadimm: LoadImm,
-    storeu8: Storeu8,
-    storeu16: Storeu16,
-    storeu32: Storeu32,
-    inc: Increment,
-    push: Push,
-    pop: Pop,
-    add: Add,
-    syscall: SysCall,
-};
-
-pub const Register = u8;
-
-pub const Load = struct {
-    loc: Register,
-    des: Register,
-};
-
-pub const LoadImm = struct {
-    des: Register,
-    num: u32,
-};
-
-pub const Storeu8 = struct {
-    des: Register,
-    src: Register,
-};
-
-pub const Storeu16 = struct {
-    des: Register,
-    src: Register,
-};
-
-pub const Storeu32 = struct {
-    des: Register,
-    src: Register,
-};
-
-pub const Increment = struct {
-    src: Register,
-};
-
-pub const Push = struct {
-    src: Register,
-};
-
-pub const Pop = struct {
-    des: Register,
-};
-
-pub const Add = struct {
-    lhs: Register,
-    rhs: Register,
-    des: Register,
-};
-
-pub const SysCall = struct {};
-
 pub fn parser(tokens: VecToken) !InstructionSet {
     var instructionSet = InstructionSet.init(std.heap.page_allocator);
     var ip: usize = 0;
     while (ip < tokens.items.len) {
-        switch (tokens.items[ip].kind) {
-            TT.Keyword => try keyword(&ip, tokens, &instructionSet),
-            // else => unreachable,
-            else => {
-                std.debug.print("{d}: {s}\n", .{ ip, tokens.items[ip].lexme });
-                ip += 1;
-            },
+        const kind = tokens.items[ip].kind;
+        if (kind == TT.Keyword) {
+            try keyword(&ip, tokens, &instructionSet);
+            continue;
+        } else if (kind == TT.Identifier and isNextToken(ip, tokens, TT.Colon)) {
+            const nameToken = nextIf(&ip, tokens, TT.Identifier) orelse return Error.ExpectedIdentifier;
+            _ = nextIf(&ip, tokens, TT.Colon) orelse return Error.ExpectedColon;
+            const instruction = Instruction{ .label = Label{
+                .name = nameToken.lexme,
+            } };
+            try instructionSet.append(instruction);
+            continue;
+        } else if (kind == TT.Dot) {
+            ip += 1;
+            try directive(&ip, tokens, &instructionSet);
+            continue;
         }
+
+        std.debug.print("error {d}: {s} {} {s}\n", .{ ip, tokens.items[ip].lexme, tokens.items[ip].kind, tokens.items[ip].lexme });
+        // for (tokens.items) |t| {
+        //     std.debug.print("{d}: {s} {}\n", .{ ip, t.lexme, t.kind });
+        // }
+        break;
     }
     return instructionSet;
 }
@@ -118,26 +80,31 @@ fn keyword(ip: *usize, tokens: VecToken, instructionSet: *InstructionSet) !void 
     }
 }
 
-fn nextIf(ip: *usize, tokens: VecToken, func: *const fn (*const Token) bool) ?Token {
+fn peek(ip: usize, tokens: VecToken, expected: TT) ?Token {
+    const token = tokens.items[ip + 1];
+    if (token.kind == expected) {
+        return token;
+    }
+    return null;
+}
+
+fn nextIf(ip: *usize, tokens: VecToken, expected: TT) ?Token {
     const token = tokens.items[ip.*];
-    if (func(&token)) {
+    if (token.kind == expected) {
         ip.* += 1;
         return token;
     }
     return null;
 }
 
-fn isPercent(t: *const Token) bool {
-    return t.kind == TT.PercentSign;
-}
-
-fn isNumber(t: *const Token) bool {
-    return t.kind == TT.Number;
+fn isNextToken(ip: usize, tokens: VecToken, kind: TT) bool {
+    _ = peek(ip, tokens, kind) orelse return false;
+    return true;
 }
 
 fn parseRegister(ip: *usize, tokens: VecToken) !Register {
-    _ = nextIf(ip, tokens, isPercent) orelse return Error.ExpectedPercentSign;
-    const token = nextIf(ip, tokens, isNumber) orelse return Error.ExpectedNumber;
+    _ = nextIf(ip, tokens, TT.PercentSign) orelse return Error.ExpectedPercentSign;
+    const token = nextIf(ip, tokens, TT.Number) orelse return Error.ExpectedNumber;
     return try std.fmt.parseInt(u8, token.lexme, 10);
 }
 
@@ -153,7 +120,8 @@ fn load(ip: *usize, tokens: VecToken, instructionSet: *InstructionSet) !void {
 
 fn loadimm(ip: *usize, tokens: VecToken, instructionSet: *InstructionSet) !void {
     const des = parseRegister(ip, tokens) catch return Error.ExpectedRegister;
-    const num = std.fmt.parseInt(u32, tokens.items[ip.*].lexme, 10) catch return Error.ExpectedNumber;
+    const numToken = nextIf(ip, tokens, TT.Number) orelse return Error.ExpectedNumber;
+    const num = try std.fmt.parseInt(u32, numToken.lexme, 10);
     const instruction = Instruction{ .loadimm = LoadImm{
         .des = des,
         .num = num,
@@ -227,8 +195,30 @@ fn add(ip: *usize, tokens: VecToken, instructionSet: *InstructionSet) !void {
     try instructionSet.append(instruction);
 }
 
-fn syscall(ip: *usize, _: VecToken, instructionSet: *InstructionSet) !void {
-    ip.* += 1;
+fn syscall(_: *usize, _: VecToken, instructionSet: *InstructionSet) !void {
     const instruction = Instruction{ .syscall = SysCall{} };
     try instructionSet.append(instruction);
+}
+
+fn directive(ip: *usize, tokens: VecToken, instructionSet: *InstructionSet) !void {
+    const directiveToken = nextIf(ip, tokens, TT.Identifier) orelse return Error.ExpectedIdentifier;
+    const lexme = directiveToken.lexme;
+    if (std.mem.eql(u8, lexme, "text")) {
+        const dir = Instruction{ .directive = Directive{ .text = Text{} } };
+        try instructionSet.append(dir);
+        return;
+    } else if (std.mem.eql(u8, lexme, "data")) {
+        const dir = Instruction{ .directive = Directive{ .data = Data{} } };
+        try instructionSet.append(dir);
+        return;
+    } else if (std.mem.eql(u8, lexme, "entry")) {
+        const token = nextIf(ip, tokens, TT.Identifier) orelse return Error.ExpectedIdentifier;
+        const dir = Instruction{ .directive = Directive{ .entry = Entry{
+            .name = token.lexme,
+        } } };
+        try instructionSet.append(dir);
+        return;
+    }
+
+    return Error.ExpectedDirective;
 }

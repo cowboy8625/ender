@@ -1,6 +1,7 @@
 const std = @import("std");
 const lexer = @import("lexer.zig").lexer;
 const parser = @import("parser.zig").parser;
+const printInstruction = @import("instruction.zig").printInstruction;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -26,6 +27,6 @@ pub fn main() !void {
     const instructionSet = try parser(tokens);
     std.debug.print("{}\n", .{instructionSet.items.len});
     for (instructionSet.items) |instruction| {
-        std.debug.print("{}\n", .{instruction});
+        printInstruction(instruction);
     }
 }
