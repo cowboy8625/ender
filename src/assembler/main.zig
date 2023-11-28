@@ -20,7 +20,6 @@ pub fn main() !void {
         return;
     }
     const filePath = args[1];
-    std.debug.print("{s}\n", .{filePath});
 
     const file = try std.fs.cwd().openFile(filePath, .{});
     defer file.close();
