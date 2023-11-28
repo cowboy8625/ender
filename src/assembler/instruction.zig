@@ -74,6 +74,45 @@ pub fn printInstruction(instruction: Instruction) void {
         },
     }
 }
+// HACK: This is just a copy of the same enum in the vm/machine.zig
+//       Not sure how to use just one, hell i dont even know how to
+//       include a package in zig.... WHAT A NOOB
+// NOTE: UNTILL THIS ENUM IS IN ONE LOCATION IT IS CRUSIAL
+//       THAT THEY SAY THE SAME ORDER.
+//       ENUM IS USED IN BOTH THE ASSEMBLER AND THE VM
+pub const Op = enum {
+    Load,
+    LoadImm,
+    Storeu8,
+    Storeu16,
+    Storeu32,
+    Inc,
+    Push,
+    Pop,
+    Add,
+    SysCall,
+};
+
+// TODO: Maybe make these methods?
+pub fn asBytes(instruction: Instruction) ?[4]u8 {
+    return switch (instruction) {
+        InstructionType.load => |i| [4]u8{ @intFromEnum(Op.Load), i.loc, i.des, 0x00 },
+        InstructionType.loadimm => |i| {
+            const leftByte = @as(u8, @truncate(i.num));
+            const rightByte = @as(u8, @truncate(i.num >> 8));
+            return [4]u8{ @intFromEnum(Op.LoadImm), i.des, rightByte, leftByte };
+        },
+        InstructionType.storeu8 => |i| [4]u8{ @intFromEnum(Op.Storeu8), i.des, i.src, 0x00 },
+        InstructionType.storeu16 => |i| [4]u8{ @intFromEnum(Op.Storeu16), i.des, i.src, 0x00 },
+        InstructionType.storeu32 => |i| [4]u8{ @intFromEnum(Op.Storeu32), i.des, i.src, 0x00 },
+        InstructionType.inc => |i| [4]u8{ @intFromEnum(Op.Inc), i.src, 0x00, 0x00 },
+        InstructionType.push => |i| [4]u8{ @intFromEnum(Op.Push), i.src, 0x00, 0x00 },
+        InstructionType.pop => |i| [4]u8{ @intFromEnum(Op.Pop), i.des, 0x00, 0x00 },
+        InstructionType.add => |i| [4]u8{ @intFromEnum(Op.Add), i.lhs, i.rhs, i.des },
+        InstructionType.syscall => |_| [4]u8{ @intFromEnum(Op.SysCall), 0x00, 0x00, 0x00 },
+        else => null,
+    };
+}
 
 pub const Register = u8;
 

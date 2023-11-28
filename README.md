@@ -1,14 +1,13 @@
 # Ender
 
-Stack based language written in Zig.
+Is a programming language with a shell interface.
+It is a compiled or interpreted language.
 
-```shell
-zig build run
-```
+### Targets
 
-Runs a shell for the user
+- [x] Ender VM
+- [ ] x86_64
+- [ ] arm64
+- [ ] wasm32
 
-```
->>> 123 321 + print
-444
-```
+Only going to use in house assemblers, so basically this will never be a finished project.

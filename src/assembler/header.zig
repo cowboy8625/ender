@@ -1,4 +1,5 @@
 const std = @import("std");
+const SymbolTable = @import("symbol_table.zig").SymbolTable;
 // 0x00 First 4 bytes are the Magic Number of 'ZAGI'
 // 0x04 Second 4 bytes are the version number
 // 0x08 Data segment starts at offset 8
@@ -20,16 +21,14 @@ pub const Header = struct {
     programSize: u32,
 
     pub fn init(
-        programSize: u32,
-        dataSegment: u32,
-        textSegment: u32,
-        entryPoint: u32,
+        symbolTable: *const SymbolTable,
     ) Header {
+        const entryPointName = symbolTable.entryPointName;
         return Header{
-            .programSize = programSize,
-            .dataSegment = dataSegment,
-            .textSegment = textSegment,
-            .entryPoint = entryPoint,
+            .programSize = @as(u32, @truncate(symbolTable.programSize)),
+            .dataSegment = @as(u32, @truncate(symbolTable.dataSegment)),
+            .textSegment = @as(u32, @truncate(symbolTable.textSegment)),
+            .entryPoint = @as(u32, @truncate(symbolTable.table.get(entryPointName).?)),
         };
     }
 

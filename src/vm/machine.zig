@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const OpCodeType = enum {
+pub const OpCodeType = enum {
     //  0.  load %0 %1
     Load,
     //  1.  loadimm %0 123
