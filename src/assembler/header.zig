@@ -13,6 +13,7 @@ const SymbolTable = @import("symbol_table.zig").SymbolTable;
 
 pub const Header = struct {
     const Self = @This();
+    pub const headerSize: usize = 64;
     const magicNumber: []const u8 = "ZAGI";
     const version: u32 = 1;
     dataSegment: u32,
@@ -40,30 +41,30 @@ pub const Header = struct {
         const programSize: [4]u8 = @bitCast(self.programSize);
         // TODO: figure out how to concat these arrays
         const header = [_]u8{
-            magicNumber[0],
-            magicNumber[1],
-            magicNumber[2],
             magicNumber[3],
-            Version[0],
-            Version[1],
-            Version[2],
+            magicNumber[2],
+            magicNumber[1],
+            magicNumber[0],
             Version[3],
-            dataSegment[0],
-            dataSegment[1],
-            dataSegment[2],
+            Version[2],
+            Version[1],
+            Version[0],
             dataSegment[3],
-            textSegment[0],
-            textSegment[1],
-            textSegment[2],
+            dataSegment[2],
+            dataSegment[1],
+            dataSegment[0],
             textSegment[3],
-            entryPoint[0],
-            entryPoint[1],
-            entryPoint[2],
+            textSegment[2],
+            textSegment[1],
+            textSegment[0],
             entryPoint[3],
-            programSize[0],
-            programSize[1],
-            programSize[2],
+            entryPoint[2],
+            entryPoint[1],
+            entryPoint[0],
             programSize[3],
+            programSize[2],
+            programSize[1],
+            programSize[0],
             0,
             0,
             0,

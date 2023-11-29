@@ -1,5 +1,7 @@
 const VERSION = "0.0.1";
 const std = @import("std");
+const assember = @import("assembler/compiler.zig").compile;
+const vm = @import("vm/machine.zig");
 // const print = std.debug.print;
 //
 // const Stack = std.ArrayList(u64);
@@ -180,4 +182,30 @@ pub fn main() !void {
     }
     const filePath = args[1];
     std.debug.print("Compiling {s}...\n", .{filePath});
+
+    const program = try assember(allocator, filePath);
+    defer program.deinit();
+
+    // var row: usize = 0;
+    // for (1.., program.items) |i, b| {
+    //     if (i % 4 == 1) {
+    //         std.debug.print("{d} - ", .{row});
+    //     }
+    //     if (i != 0 and i % 4 == 0) {
+    //         const bytes = [4]u8{
+    //             program.items[(row * 4) + 0],
+    //             program.items[(row * 4) + 1],
+    //             program.items[(row * 4) + 2],
+    //             program.items[(row * 4) + 3],
+    //         };
+    //         const num = std.mem.readInt(u32, &bytes, .Big);
+    //         std.debug.print("{x:0>2} - {d}\n", .{ b, num });
+    //         row += 1;
+    //         continue;
+    //     }
+    //     std.debug.print("{x:0>2} ", .{b});
+    // }
+
+    var machine = vm.Machine.init(program.items);
+    machine.run();
 }

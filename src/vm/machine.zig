@@ -1,3 +1,6 @@
+// 1. Fix Compiled Program to account for all the offsets.
+// Problem: The offset to the entry point is wrong cause of the header and data size.
+// Solution: Add the header and data size to the offset to fix it in compiled code.
 const std = @import("std");
 
 pub const OpCodeType = enum {
@@ -59,7 +62,7 @@ const OpCode = struct {
 };
 
 pub const Machine = struct {
-    program: []const u32,
+    program: []const u8,
     ip: usize,
     stack: [1024]u32,
     heap: [1024]u8,
@@ -69,7 +72,7 @@ pub const Machine = struct {
 
     const Self = @This();
 
-    pub fn init(program: []const u32) Self {
+    pub fn init(program: []const u8) Self {
         return Machine{
             .program = program,
             .ip = 0,
@@ -81,67 +84,124 @@ pub const Machine = struct {
         };
     }
 
-    pub fn runOnce(self: *Self, opCode: OpCode) void {
-        switch (opCode.type) {
+    pub fn runOnce(self: *Self, code: OpCodeType) void {
+        switch (code) {
             OpCodeType.Load => {
-                const reg = opCode.registerFromArg1();
-                const loc = opCode.registerFromArg2();
+                const reg = self.getNextu8();
+                const loc = self.getNextu8();
+                _ = self.getNextu8();
                 self.load(reg, loc);
             },
             OpCodeType.LoadImm => {
-                const reg = opCode.registerFromArg1();
-                const num = @as(u32, opCode.u16FromArg2AndArg3());
+                const reg = self.getNextu8();
+                const num = @as(u32, self.getNextu16());
                 self.loadImm(reg, num);
             },
             OpCodeType.Storeu8 => {
-                const reg1 = opCode.registerFromArg1();
-                const reg2 = opCode.registerFromArg2();
+                const reg1 = self.getNextu8();
+                const reg2 = self.getNextu8();
+                _ = self.getNextu8();
                 self.storeu8(reg1, reg2);
             },
             OpCodeType.Storeu16 => {
-                const reg1 = opCode.registerFromArg1();
-                const reg2 = opCode.registerFromArg2();
+                const reg1 = self.getNextu8();
+                const reg2 = self.getNextu8();
+                _ = self.getNextu8();
                 self.storeu16(reg1, reg2);
             },
             OpCodeType.Storeu32 => {
-                const reg1 = opCode.registerFromArg1();
-                const reg2 = opCode.registerFromArg2();
+                const reg1 = self.getNextu8();
+                const reg2 = self.getNextu8();
+                _ = self.getNextu8();
                 self.storeu32(reg1, reg2);
             },
             OpCodeType.Add => {
-                const lhsReg = opCode.registerFromArg1();
-                const rhsReg = opCode.registerFromArg2();
-                const des = opCode.registerFromArg3();
+                const lhsReg = @as(usize, self.getNextu8());
+                const rhsReg = @as(usize, self.getNextu8());
+                const des = self.getNextu8();
                 const lhs = self.getRegister(lhsReg);
                 const rhs = self.getRegister(rhsReg);
                 self.loadImm(des, lhs + rhs);
             },
             OpCodeType.Inc => {
-                const reg = opCode.registerFromArg1();
+                const reg = self.getNextu8();
+                _ = self.getNextu8();
+                _ = self.getNextu8();
                 self.inc(reg);
             },
             OpCodeType.Push => {
-                std.debug.panic("OpCode.Push not implemented", .{});
+                std.debug.panic("Push not implemented", .{});
             },
             OpCodeType.Pop => {
-                std.debug.panic("OpCode.Pop not implemented", .{});
+                std.debug.panic("Pop not implemented", .{});
             },
             OpCodeType.SysCall => {
+                _ = self.getNextu8();
+                _ = self.getNextu8();
+                _ = self.getNextu8();
                 self.syscall();
             },
         }
     }
 
     pub fn run(self: *Self) void {
+        self.ip = self.getEntryPoint();
         while (self.isRunning and self.ip < self.program.len) {
-            const opCode = OpCode.decode(self.program[self.ip]);
-            // std.debug.print("ip: {d} type: {s} arg1: {d} arg2: {d} arg3: {d}\n",
-            //          .{ self.ip, @tagName(opCode.type), opCode.arg1, opCode.arg2, opCode.arg3 });
-            self.runOnce(opCode);
-            self.ip += 1;
+            const byte = self.getNextu8();
+            const opCodeType = @as(OpCodeType, @enumFromInt(byte));
+            self.runOnce(opCodeType);
         }
-        // self.print_heap();
-        // self.print_registers();
+    }
+
+    fn getMagicNumber(self: *Self) []const u8 {
+        return self.program[0..4];
+    }
+
+    fn getVersionNumber(self: *Self) usize {
+        const bytes = self.program[4..8].*;
+        const num = std.mem.readInt(u32, &bytes, .Big);
+        return @as(usize, num);
+    }
+
+    fn getDataSectionSize(self: *Self) usize {
+        const bytes = self.program[8..12].*;
+        const num = std.mem.readInt(u32, &bytes, .Big);
+        return @as(usize, num);
+    }
+
+    fn getTextSectionStart(self: *Self) usize {
+        const bytes = self.program[12..16].*;
+        const num = std.mem.readInt(u32, &bytes, .Big);
+        return @as(usize, num);
+    }
+
+    fn getEntryPoint(self: *Self) usize {
+        const bytes = self.program[16..20].*;
+        const num = std.mem.readInt(u32, &bytes, .Big);
+        return @as(usize, num);
+    }
+
+    fn getProgramSize(self: *Self) usize {
+        const bytes = []const u8{
+            self.program[20],
+            self.program[21],
+            self.program[22],
+            self.program[23],
+        };
+        const size = @as(usize, bytes);
+        return size;
+    }
+
+    fn getNextu8(self: *Self) u8 {
+        const val = self.program[self.ip];
+        self.ip += 1;
+        return val;
+    }
+
+    fn getNextu16(self: *Self) u16 {
+        const arg1 = self.getNextu8();
+        const arg2 = self.getNextu8();
+        return @as(u16, arg1) << 8 | @as(u16, arg2);
     }
 
     fn print_registers(self: *Self) void {
@@ -236,8 +296,7 @@ pub const Machine = struct {
         stdout.print("{s}", .{bytes}) catch unreachable;
     }
 
-    fn syscall_print_stderr(self: *Self) void {
-        _ = self;
+    fn syscall_print_stderr(_: *Self) void {
         // const start = self.getRegister(reg2);
         // _ = start;
         // const len = self.getRegister(reg3);

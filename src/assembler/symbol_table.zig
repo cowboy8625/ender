@@ -6,6 +6,7 @@ const IT = @import("instruction.zig").InstructionType;
 const Directive = @import("directive.zig").Directive;
 const DT = @import("directive.zig").DirectiveType;
 const Text = @import("directive.zig").Text;
+const headerSize = @import("header.zig").Header.headerSize;
 pub const HashMap = std.StringHashMap(usize);
 
 const Error = error{
@@ -14,7 +15,6 @@ const Error = error{
 
 pub const SymbolTable = struct {
     const Self = @This();
-    const headerSize: usize = 64;
     entryPointName: []const u8,
     programSize: usize,
     textSegment: usize,
@@ -74,5 +74,12 @@ pub fn createSymbolTable(allocator: Allocator, instructions: InstructionSet) !Sy
         }
         ip += 1;
     }
+
+    const offset = textSegment - dataSegment + headerSize;
+    var tableIter = table.iterator();
+    while (tableIter.next()) |entry| {
+        try table.put(entry.key_ptr.*, entry.value_ptr.* + offset);
+    }
+
     return SymbolTable.init(allocator, table, entryPointName.?, programCounter, textSegment, dataSegment);
 }
