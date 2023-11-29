@@ -1,12 +1,6 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
-const lexer = @import("lexer.zig").lexer;
-const parser = @import("parser.zig").parser;
-const printInstruction = @import("instruction.zig").printInstruction;
-const createSymbolTable = @import("symbol_table.zig").createSymbolTable;
-const SymbolTable = @import("symbol_table.zig").SymbolTable;
-const Header = @import("header.zig").Header;
 const compile = @import("compiler.zig").compile;
+const Program = @import("compiler.zig").Program;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -21,20 +15,25 @@ pub fn main() !void {
     }
     const filePath = args[1];
 
-    const file = try std.fs.cwd().openFile(filePath, .{});
-    defer file.close();
-    const fileSize = try file.getEndPos();
-    const buffer = try file.readToEndAlloc(allocator, fileSize);
-    defer allocator.free(buffer);
+    const program = try compile(allocator, filePath);
+    defer program.deinit();
 
-    const tokens = try lexer(buffer);
-    const instructionSet = try parser(tokens);
-    defer instructionSet.deinit();
+    for (1.., program.items) |i, b| {
+        if (i != 0 and i % 4 == 0) {
+            std.debug.print("{x:0>2}\n", .{b});
+            continue;
+        }
+        std.debug.print("{x:0>2} ", .{b});
+    }
+    // Writing to file
+    const binaryFileName = createBinaryFileName(filePath);
+    const binaryFile = try std.fs.cwd().createFile(binaryFileName, .{});
+    defer binaryFile.close();
+    _ = try binaryFile.write(program.items);
+}
 
-    var symbolTable: SymbolTable = try createSymbolTable(allocator, instructionSet);
-    defer symbolTable.deinit();
-
-    const header = Header.init(&symbolTable);
-
-    try compile(filePath, header, symbolTable, instructionSet);
+fn createBinaryFileName(filePath: []const u8) []const u8 {
+    const delimiter = ".";
+    var parts = std.mem.split(u8, filePath, delimiter);
+    return parts.next() orelse return "";
 }

@@ -94,8 +94,8 @@ pub const Op = enum {
 };
 
 // TODO: Maybe make these methods?
-pub fn asBytes(instruction: Instruction) ?[4]u8 {
-    return switch (instruction) {
+pub fn asBytes(instruction: *const Instruction) ?[4]u8 {
+    return switch (instruction.*) {
         InstructionType.load => |i| [4]u8{ @intFromEnum(Op.Load), i.loc, i.des, 0x00 },
         InstructionType.loadimm => |i| {
             const leftByte = @as(u8, @truncate(i.num));

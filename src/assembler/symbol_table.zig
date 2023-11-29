@@ -58,7 +58,6 @@ pub fn createSymbolTable(allocator: Allocator, instructions: InstructionSet) !Sy
                         dataSegment = programCounter;
                     },
                     Directive.entry => |dt| {
-                        std.debug.print("entry: {s} at {x}\n", .{ dt.name, ip });
                         if (entryPointName != null) {
                             return error.EntryAlreadySet;
                         }
