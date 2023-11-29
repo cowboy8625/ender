@@ -24,7 +24,7 @@ pub const OpCodeType = enum {
     Add,
     //  9. syscall does not take any arguments
     // Exit program          %0 = 0, %1 = 0
-    // Wrtie to stdout       %0 = 1, %1 = (string location on heap), %2 = length
+    // Wrtie to stdout       %0 = 1, %1 = (string location on heap), %2 = length, %3 = (0 for data, 1 for heap)
     // Wrtie to stderr       %0 = 1, %1 = (string location on heap), %2 = length
     SysCall,
 };
@@ -291,7 +291,8 @@ pub const Machine = struct {
     fn syscall_print_stdout(self: *Self) void {
         const start = self.getRegister(1);
         const len = self.getRegister(2);
-        const bytes = self.heap[start .. start + len];
+        const pointerLocation = self.getRegister(3);
+        const bytes = if (pointerLocation == 0) self.program[start .. start + len] else self.heap[start .. start + len];
         const stdout = std.io.getStdOut().writer();
         stdout.print("{s}", .{bytes}) catch unreachable;
     }

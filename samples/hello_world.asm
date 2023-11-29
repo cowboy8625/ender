@@ -58,7 +58,9 @@ main:
     loadimm     %0    1    ;; load register 0 with 1 for a write syscall
     loadimm     %1    0    ;; load register 1 with the string location
     loadimm     %2    13   ;; load 13 into register 2 aka the length of the string
+    loadimm     %3    1    ;; load 1 into register 3 to tell the syscall write that our string is on heap
     syscall                ;; syscall
+
     loadimm     %0    0    ;; load register 0 with 0 for a write syscall
     loadimm     %1    10   ;; load register 0 with 10 for the exit code
     syscall                ;; syscall
