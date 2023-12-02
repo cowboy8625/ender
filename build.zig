@@ -24,6 +24,21 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const vm = b.addModule("vm", .{
+        .source_file = .{ .path = "libs/vm/src/machine.zig" },
+    });
+    exe.addModule("vm", vm);
+
+    const assembler = b.addModule("assembler", .{
+        .source_file = .{ .path = "libs/assembler/src/compiler.zig" },
+    });
+    exe.addModule("assembler", assembler);
+
+    const compiler = b.addModule("compiler", .{
+        .source_file = .{ .path = "libs/compiler/src/lib.zig" },
+    });
+    exe.addModule("compiler", compiler);
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
