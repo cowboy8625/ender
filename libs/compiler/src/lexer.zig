@@ -479,7 +479,7 @@ test "lexing a basic hello world" {
     try testToken(try lexer.next(), .String, "\"Hello, World!\"", 21, 36, 1);
     try testToken(try lexer.next(), .ParenClose, ")", 36, 37, 1);
     try testToken(try lexer.next(), .Semicolon, ";", 37, 38, 1);
-    try testToken(try lexer.next(), .BraceClose, "}", 40, 40, 2);
+    try testToken(try lexer.next(), .BraceClose, "}", 39, 40, 2);
 }
 
 fn testToken(token: Token, expectedKind: TokenKind, expectedLexme: []const u8, expectedStart: usize, expectedEnd: usize, expectedLine: usize) !void {
